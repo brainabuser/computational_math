@@ -1,4 +1,4 @@
-from OOP import second as snd
+from OOP import num_diff as snd
 
 import numpy as np
 
@@ -20,8 +20,9 @@ class NSpace:
             temp = np.amax(abs(obj(temp)))
         return result
 
-    def get_metrics(self, f):
-        return np.sqrt(self.get_norm(f))
+    def get_metrics(self, f1, f2):
+        dif = lambda x: f1(x) - f2(x)
+        return np.sqrt(self.get_norm(dif))
 
 
 xSym = smp.Symbol('x')
@@ -54,8 +55,7 @@ for s, i in zip(spaces, range(3)):
     j = 1
     for f, fs in zip(functions, functionsSym):
         for f1, fs1 in zip(functions[j:], functionsSym[j:]):
-            dif = lambda x: f1(x) - f(x)
-            res = s.get_metrics(dif)
+            res = s.get_metrics(f1, f)
             print('Расстояние между ' + str(fs) +
                   ' и ' + str(fs1) +
                   ' равно ' + str(res) +
