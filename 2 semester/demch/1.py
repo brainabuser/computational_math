@@ -2,7 +2,7 @@ import numpy as np
 
 import csv
 
-A = -5.
+A = 5.
 B = 2.
 
 

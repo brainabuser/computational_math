@@ -22,7 +22,7 @@ class NSpace:
 
     def get_metrics(self, f1, f2):
         dif = lambda x: f1(x) - f2(x)
-        return np.sqrt(self.get_norm(dif))
+        return self.get_norm(dif)
 
 
 xSym = smp.Symbol('x')
