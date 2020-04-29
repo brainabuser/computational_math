@@ -1,5 +1,6 @@
 cmake-build-debug/
 cmake-build-release/
+__pycache__/
 .idea/
 venv/
 *.xml
