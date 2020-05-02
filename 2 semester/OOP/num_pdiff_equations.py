@@ -4,28 +4,32 @@ import numpy as np
 
 import timeit
 
-from OOP import num_diff as nd
-
 
 class LogisticRightHandSide:
-    def __init__(self, alpha, r):
-        self.alpha = alpha
-        self.R = r
+    def __init__(self, h, b_l, b_r, kappa):
+        self.h, self.kappa = h, kappa
+        num_points = int(1 / h) + 1
+        self.A = np.zeros((num_points, num_points))
+        flat_a = self.A.ravel()
+        flat_a[1::num_points + 1] = 1
+        flat_a[num_points::num_points + 1] = 1
+        flat_a[::num_points + 1] = 2
+        self.F = np.zeros(num_points)
+        self.F[0] = b_l
+        self.F[-1] = b_r
 
     def __call__(self, u):
-        return self.alpha * u * (1 - u / self.R)
+        return self.kappa / self.h ** 2 * (np.dot(self.A, u) + self.F)
 
 
 class ComputationalMethod:
-    def __init__(self, f, init_val, num_blocks, t_start, t_end):
-        self.f = f
-        self.u0 = init_val
-        self.numBlocks, self.numPoints = num_blocks, num_blocks + 1
-        self.dt = (float(t_end) - float(t_start)) / self.numBlocks
-        self.index = 0.
-
-        self.solutionArray = np.zeros(self.numPoints)
-        self.timeArray = np.linspace(t_start, t_end, self.numPoints)
+    def __init__(self, f, h, tau, t_start, t_end):
+        self.f, self.h_dim = f, int(1 / h) + 1
+        self.t_dim = int(1 / tau) + 1
+        self.dt = (float(t_end) - float(t_start)) / (self.t_dim - 1)
+        self.solutionArray = np.zeros((self.t_dim, self.h_dim))
+        self.timeArray = np.linspace(t_start, t_end, self.t_dim)
+        self.spaceArray = np.linspace(0, 1, self.h_dim)
 
         self.tStart, self.tEnd = float(t_start), float(t_end)
 
@@ -34,15 +38,18 @@ class ComputationalMethod:
     def Solve(self):
         print('Начало рассчёта методом %s' % self.__class__.__name__)
         start = timeit.default_timer()
-        self.solutionArray[0] = self.u0
+        u0 = np.zeros(self.h_dim)
+        for i in range(self.h_dim):
+            if (self.spaceArray[i] >= 0.4) and (self.spaceArray[i] <= 0.6):
+                u0[i] = 1.
+        self.solutionArray[0] = u0
 
-        for i in range(self.numBlocks):
-            self.index = i
-            u_old = self.solutionArray[i]
-            self.solutionArray[i + 1] = self.GetNextStep(u_old)
+        for t in range(self.t_dim - 1):
+            u_old = self.solutionArray[t]
+            self.solutionArray[t + 1] = self.GetNextStep(u_old)
 
-            if (i + 1) % (self.numBlocks // 10) == 0:
-                t = self.timeArray[i + 1]
+            if (t + 1) % ((self.t_dim - 1) // 10) == 0:
+                t = self.timeArray[t + 1]
                 print('%.2f%% вычислений завершено' % (100. * float(t) / (self.tEnd - self.tStart)))
 
         elapsed_time = float(timeit.default_timer() - start)
@@ -52,7 +59,7 @@ class ComputationalMethod:
         raise NotImplementedError
 
     def SetPlot(self):
-        plt.plot(self.timeArray, self.solutionArray, '-o',
+        plt.plot(self.spaceArray, self.solutionArray[-1], '-o',
                  label=str(self.__class__.__name__))
 
 
@@ -78,20 +85,29 @@ class RK4(ComputationalMethod):
         return u_old + dt / 6. * (k1 + 2. * k2 + 2. * k3 + k4)
 
 
-class ImplicitTrapezium(ComputationalMethod):
-    def GetNextStep(self, u_old):
-        return u_old + self.dt / 2. * \
-               (self.f(u_old) + self.f(self.GetNext(u_old)))
+b_l = 0.
+b_r = 0.
+kappa = 0.1
+h = 1. / 25
+tau = h ** 2 / (200 * kappa)
+tStart = 0.
+tEnd = 0.04
 
-    def GetNext(self, u_old):
-        F = lambda x: x - self.solutionArray[self.index] \
-                      - self.dt / 2. * \
-                      (self.f(x) + self.f(self.solutionArray[self.index]))
-        curr = prev = u_old
-        error = 1.
-        while error > 1e-3:
-            der = nd.DerivativeNum3(F, h=1e-3)
-            curr = prev - F(prev) / der(prev)
-            prev = curr
-            error = np.fabs(curr - prev)
-        return curr
+func = LogisticRightHandSide(h, b_l, b_r, kappa)
+
+cmp_mtds = [ExplicitEuler, Heun, RK4]
+
+plt.figure(figsize=(11, 7))
+plt.rc('font', size=20)
+
+for m in cmp_mtds:
+    method = m(func, h, tau, tStart, tEnd)
+    method.Solve()
+    method.SetPlot()
+
+plt.grid(False)
+plt.title('Динамика популяции')
+plt.xlabel('Пространство')
+plt.ylabel('Популяция')
+plt.legend()
+plt.show()
