@@ -13,7 +13,7 @@ class LogisticRightHandSide:
         flat_a = self.A.ravel()
         flat_a[1::num_points + 1] = 1
         flat_a[num_points::num_points + 1] = 1
-        flat_a[::num_points + 1] = 2
+        flat_a[::num_points + 1] = -2
         self.F = np.zeros(num_points)
         self.F[0] = b_l
         self.F[-1] = b_r
@@ -25,8 +25,8 @@ class LogisticRightHandSide:
 class ComputationalMethod:
     def __init__(self, f, h, tau, t_start, t_end):
         self.f, self.h_dim = f, int(1 / h) + 1
-        self.t_dim = int(1 / tau) + 1
-        self.dt = (float(t_end) - float(t_start)) / (self.t_dim - 1)
+        self.t_dim = int((t_end - t_start) / tau) + 1
+        self.dt = tau
         self.solutionArray = np.zeros((self.t_dim, self.h_dim))
         self.timeArray = np.linspace(t_start, t_end, self.t_dim)
         self.spaceArray = np.linspace(0, 1, self.h_dim)
@@ -59,6 +59,7 @@ class ComputationalMethod:
         raise NotImplementedError
 
     def SetPlot(self):
+        print(self.solutionArray[-1])
         plt.plot(self.spaceArray, self.solutionArray[-1], '-o',
                  label=str(self.__class__.__name__))
 
